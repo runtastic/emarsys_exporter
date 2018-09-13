@@ -30,7 +30,7 @@ const (
 )
 
 var (
-	listeningAddress = flag.String("telemetry.address", ":9481", "Address on which to expose metrics.")
+	listeningAddress = flag.String("telemetry.address", ":9485", "Address on which to expose metrics.")
 	metricsEndpoint  = flag.String("telemetry.endpoint", "/metrics", "Path under which to expose metrics.")
 	insecure         = flag.Bool("insecure", true, "Ignore server certificate if using https")
 )
