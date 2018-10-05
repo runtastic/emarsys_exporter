@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"errors"
 	"flag"
-	"fmt"
 	"github.com/mitchellh/mapstructure"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/common/log"
@@ -126,6 +125,7 @@ func NewExporter(uri string) *Exporter {
 			Help:      "Whether the emarsys is up.",
 		}),
 		client: &http.Client{
+			Timeout: 10 * time.Second,
 			Transport: &http.Transport{
 				TLSClientConfig: &tls.Config{InsecureSkipVerify: *insecure},
 			},
@@ -154,10 +154,10 @@ func (e *Exporter) collect(ch chan<- prometheus.Metric) error {
 	if err != nil {
 		e.emarsysUp.Set(0)
 		ch <- prometheus.MustNewConstMetric(e.exporterScrapeError, prometheus.GaugeValue, 1)
-		return fmt.Errorf("Error scraping emarsys: %v", err)
+		return err
 	}
 	e.emarsysUp.Set(1)
-	resp.Body.Close()
+	defer resp.Body.Close()
 
 	emarsys, err := GetEmarsysMetrics()
 	if err != nil {
@@ -229,14 +229,12 @@ func getContent(uri string) (body string, err error) {
 	if err != nil {
 		scrapeError = 1
 		log.Error(err)
-		res.Body.Close()
 		return "", err
 	}
 
 	if res.StatusCode < 200 || res.StatusCode >= 400 {
 		log.Error(res.Status)
 		scrapeError = 1
-		res.Body.Close()
 		return "", errors.New("HTTP return code: " + strconv.Itoa(res.StatusCode))
 	}
 
@@ -245,11 +243,10 @@ func getContent(uri string) (body string, err error) {
 	if err != nil {
 		scrapeError = 1
 		log.Error(err)
-		res.Body.Close()
 		return "", errors.New("Error while getting HTTP content / reading body.")
 	}
 
-	res.Body.Close()
+	defer res.Body.Close()
 
 	return string(content), err
 }
